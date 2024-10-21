@@ -1,6 +1,14 @@
 
 # RISC-V Crypto RTL
 
+## Updates
+
+This repository is an updated version of the reference RTL from the riscv-crypto reposistory. This version is updated to adhere to the latest ratified version (20240411) of the riscv-unprivileged-spec.
+
+The biggest difference is the removal of LUT4 type instructions, and the inclusion of XPERM4 and XPERM8 instructions.
+
+**The vast majority of the work in this repository was done by Ben Marshall.**
+
 *Notes on the experimental RTL for implementing proposed instructions.*
 
 ---
