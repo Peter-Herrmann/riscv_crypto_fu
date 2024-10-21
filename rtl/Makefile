@@ -1,5 +1,3 @@
-REPO_BUILD = /shared/home/pherrmann/Code/riscv_crypto_fu/build
-YOSYS_ROOT = /apps/tools/yosys/oss-cad-suite/20240327/bin
 
 BUILD_DIR = $(REPO_BUILD)/rtl
 YOSYS     = $(YOSYS_ROOT)/yosys
