@@ -37,8 +37,8 @@ Some are parameterised by `XLEN`.
 
 Module Name                       | NAND2 Cells | LTP
 ----------------------------------|-------------|-------------
-`riscv_crypto_fu_lut4` (RV32)     |       566   |  6
-`riscv_crypto_fu_lut4` (RV64)     |      1938   |  7
+`riscv_crypto_fu_xperm`   (RV32)  |       548   |  7 
+`riscv_crypto_fu_xperm`   (RV64)  |      2379   |  9 
 `riscv_crypto_fu_saes32`          |      1176   | 30
 `riscv_crypto_fu_saes64` (8 Sbox) |      8663   | 28
 `riscv_crypto_fu_saes64` (4 Sbox) |      6277   | 29

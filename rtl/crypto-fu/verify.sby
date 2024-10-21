@@ -30,7 +30,7 @@ sboxes_8: verilog_defaults -add -DSBOXES=8
 
 read_verilog -formal riscv_crypto_fu.v
 read_verilog -formal riscv_crypto_fu_aes_mix_columns.v
-read_verilog -formal riscv_crypto_fu_lut4.v
+read_verilog -formal riscv_crypto_fu_xperm.v
 read_verilog -formal riscv_crypto_fu_saes32.v
 read_verilog -formal riscv_crypto_fu_saes64.v
 read_verilog -formal riscv_crypto_fu_sboxes.v
@@ -42,30 +42,34 @@ read_verilog -formal riscv_crypto_fu_saes32_ssm4.v
 read_verilog -formal tb_checker_saes32.v
 read_verilog -formal tb_checker_saes64.v
 read_verilog -formal tb_checker_ssm4.v
-read_verilog -formal tb_checker_lut4_rv32.v
-read_verilog -formal tb_checker_lut4_rv64.v
+read_verilog -formal tb_checker_xperm4_rv32.v
+read_verilog -formal tb_checker_xperm4_rv64.v
+read_verilog -formal tb_checker_xperm8_rv32.v
+read_verilog -formal tb_checker_xperm8_rv64.v
 read_verilog -formal tb_riscv_crypto_fu.v
 
 prep -top tb_riscv_crypto_fu
 
 [files]
-crypto-fu/riscv_crypto_fu.v
-crypto-fu/riscv_crypto_fu_aes_mix_columns.v
-crypto-fu/riscv_crypto_fu_lut4.v
-crypto-fu/riscv_crypto_fu_saes32.v
-crypto-fu/riscv_crypto_fu_saes64.v
-crypto-fu/riscv_crypto_fu_sboxes.v
-crypto-fu/riscv_crypto_fu_ssm3.v
-crypto-fu/riscv_crypto_fu_ssha256.v
-crypto-fu/riscv_crypto_fu_ssha512.v
-crypto-fu/riscv_crypto_fu_ssm4.v
-crypto-fu/riscv_crypto_fu_saes32_ssm4.v
-crypto-fu/tb_checker_saes32.v
-crypto-fu/tb_checker_saes64.v
-crypto-fu/tb_checker_ssm4.v
-crypto-fu/tb_checker_saes.vh
-crypto-fu/tb_checker_lut4_rv32.v
-crypto-fu/tb_checker_lut4_rv64.v
-crypto-fu/tb_riscv_crypto_fu.v
+riscv_crypto_fu.v
+riscv_crypto_fu_aes_mix_columns.v
+riscv_crypto_fu_xperm.v
+riscv_crypto_fu_saes32.v
+riscv_crypto_fu_saes64.v
+riscv_crypto_fu_sboxes.v
+riscv_crypto_fu_ssm3.v
+riscv_crypto_fu_ssha256.v
+riscv_crypto_fu_ssha512.v
+riscv_crypto_fu_ssm4.v
+riscv_crypto_fu_saes32_ssm4.v
+tb_checker_saes32.v
+tb_checker_saes64.v
+tb_checker_ssm4.v
+tb_checker_saes.vh
+tb_checker_xperm4_rv32.v
+tb_checker_xperm4_rv64.v
+tb_checker_xperm8_rv32.v
+tb_checker_xperm8_rv64.v
+tb_riscv_crypto_fu.v
 
 

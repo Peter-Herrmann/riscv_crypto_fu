@@ -35,7 +35,7 @@ input dut_g_resetn
 
 // `XLEN set by verify.sby depending on job type.
 parameter XLEN          = `XLEN ; // Must be one of: 32, 64.
-parameter XPERM_EN      = 1 , // Enable the xperm* instructions.
+parameter XPERM_EN      = 1     ;// Enable the xperm* instructions.
 parameter SAES_EN       = 1     ; // Enable the saes32/64 instructions.
 parameter SAES_DEC_EN   = 1     ; // Enable the saes32/64 decrypt instructions.
 parameter SAES64_SBOXES =`SBOXES; // saes64 sbox instances. Valid values: 8
