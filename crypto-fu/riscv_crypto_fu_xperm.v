@@ -1,4 +1,7 @@
-
+// Copyright (C) 2024
+//    Peter Herrmann
+//
+// Modified from existing source from Ben Marshall, with the following license:
 // 
 // Copyright (C) 2020 
 //    SCARV Project  <info@scarv.org>
@@ -18,20 +21,19 @@
 //
 
 //
-// module: riscv_crypto_fu_lut4
+// module: riscv_crypto_fu_xperm
 //
-//  Implements the LUT4 instructions for the RISC-V cryptography extension.
+//  Implements the XPERM instructions for the RISC-V cryptography extension Zbkx.
 //
 //  The following table shows which instructions are implemented
 //  based on the selected value of XLEN.
 //
 //  Instruction     | XLEN=32 | XLEN=64 
 //  ----------------|---------|---------
-//   lut4lo         |   x     |         
-//   lut4hi         |   x     |         
-//   lut4           |         |    x    
+//   xperm4         |    x    |    x    
+//   xperm8         |    x    |    x    
 //
-module riscv_crypto_fu_lut4 #(
+module riscv_crypto_fu_xperm #(
 parameter XLEN          = 64  // Must be one of: 32, 64.
 )(
 
@@ -42,9 +44,8 @@ input  wire             valid           , // Inputs valid.
 input  wire [ XLEN-1:0] rs1             , // Source register 1
 input  wire [ XLEN-1:0] rs2             , // Source register 2
 
-input  wire             op_lut4lo       , // RV32 lut4-lo instruction
-input  wire             op_lut4hi       , // RV32 lut4-hi instruction
-input  wire             op_lut4         , // RV64 lut4    instruction
+input  wire             op_xperm4       , // Crossbar Permutation (nibbles) Instruction
+input  wire             op_xperm8       , // Crossbar Permutation (bytes) Instruction
 
 output wire             ready           , // Outputs ready.
 output wire [ XLEN-1:0] rd                // Result.
@@ -61,6 +62,7 @@ localparam RV32 = XLEN == 32 ;
 localparam RV64 = XLEN == 64 ;
 
 localparam NIBBLES = XLEN / 4;
+localparam BYTES   = XLEN / 8;
 
 //
 // Instruction logic
@@ -70,35 +72,61 @@ localparam NIBBLES = XLEN / 4;
 assign ready = valid;
 
 // Easily indexable access to the LUT.
-wire [3:0] lut4_lut [NIBBLES-1:0];
+wire [3:0] xperm4_lut [NIBBLES-1:0];
+wire [7:0] xperm8_lut [BYTES-1:0];
 
-// Unpack the LUT from RS2. Works for RV32 and RV64.
+wire [ XLEN-1:0] xperm8_rd, xperm4_rd;
+
+
+// XPERM4: unpack nibbles from RS2. Works for RV32 and RV64.
 genvar n;
 for(n = 0; n < NIBBLES; n = n + 1) begin
     
     // Pull out each nibble of rs2.
-    assign lut4_lut[n] = rs2[4*n+:4];
+    assign xperm4_lut[n] = rs2[4*n+:4];
 
-    if         (RV32) begin : rv32_lut4      // RV32 LUT4
+    if (RV32) begin : rv32_xperm4               // RV32 XPERM4
+        wire [2:0] lut_in;
+        wire [3:0] lut_out;
+        assign lut_in            = rs1[4*n+:3];
+        assign lut_out           = xperm4_lut[lut_in];
+        assign xperm4_rd[n*4+:4] = lut_out;
 
-        wire [2:0] lut_in  = rs1[4*n+:3];
-        
-        wire       lut_hi  = rs1[4*n +3];
-        
-        wire       sel_hi  = lut_hi ^ op_lut4hi;
-
-        wire [3:0] lut_out = lut4_lut[lut_in];
-
-        assign rd[n*4+:4]  = sel_hi ? 4'b0000 : lut_out;
-
-    end else if(RV64) begin : rv64_lut4      // RV64 LUT4
-        
-        wire [3:0] lut_in  = rs1[4*n+:4];
-        
-        assign rd[n*4+:4]  = lut4_lut[lut_in];
+    end else if(RV64) begin : rv64_xperm4      // RV64 XPERM4
+        wire [3:0] lut_in;
+        assign lut_in            = rs1[4*n+:4];
+        assign xperm4_rd[n*4+:4] = xperm4_lut[lut_in];
 
     end
 
 end
+
+
+// XPERM8: unpack bytes from RS2. Works for RV32 and RV64.
+genvar b;
+for(b = 0; b < BYTES; b = b + 1) begin
+    
+    // Pull out each nibble of rs2.
+    assign xperm8_lut[b] = rs2[8*b+:8];
+
+    if (RV32) begin : rv32_xperm8               // RV32 XPERM8
+        wire [1:0] lut_in;
+        wire [7:0] lut_out;
+        assign lut_in            = rs1[8*b+:2];
+        assign lut_out           = xperm8_lut[lut_in];
+        assign xperm8_rd[b*8+:8] = lut_out;
+
+    end else if(RV64) begin : rv64_xperm8      // RV64 XPERM8
+        wire [2:0] lut_in;
+        assign lut_in            = rs1[8*b+:3];
+        assign xperm8_rd[b*8+:8] = xperm8_lut[lut_in];
+
+    end
+
+end
+
+
+assign rd = op_xperm8 ? xperm8_rd : xperm4_rd;
+
 
 endmodule

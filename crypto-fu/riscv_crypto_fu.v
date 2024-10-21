@@ -1,4 +1,7 @@
-
+// Copyright (C) 2024
+//    Peter Herrmann
+//
+// Modified from existing source from Ben Marshall, with the following license:
 // 
 // Copyright (C) 2020 
 //    SCARV Project  <info@scarv.org>
@@ -31,9 +34,8 @@
 //
 //  Instruction     | XLEN=32 | XLEN=64 | Feature Parameter 
 //  ----------------|---------|---------|----------------------------------
-//   lut4lo         |   x     |         | LUT4_EN           
-//   lut4hi         |   x     |         | LUT4_EN           
-//   lut4           |         |    x    | LUT4_EN           
+//   xperm4         |   x     |    x    | XPERM_EN           
+//   xperm8         |   x     |    x    | XPERM_EN           
 //   saes32.encs    |   x     |         | SAES_EN
 //   saes32.encsm   |   x     |         | SAES_EN     
 //   saes32.decs    |   x     |         | SAES_DEC_EN     
@@ -84,7 +86,7 @@
 //
 module riscv_crypto_fu #(
 parameter XLEN              = 64, // Must be one of: 32, 64.
-parameter LUT4_EN           = 1 , // Enable the lut4 instructions.
+parameter XPERM_EN          = 1 , // Enable the xperm* instructions.
 parameter SAES_EN           = 1 , // Enable the saes32/64 instructions.
 parameter SAES_DEC_EN       = 1 , // Enable saes32/64 decrypt instructions.
 parameter SAES64_SBOXES     = 8 , // saes64 sbox instances. Valid values: 8,4
@@ -104,9 +106,8 @@ input  wire [ XLEN-1:0] rs1             , // Source register 1
 input  wire [ XLEN-1:0] rs2             , // Source register 2
 input  wire [      3:0] imm             , // bs, enc_rcon for aes32/64.
 
-input  wire             op_lut4lo       , // RV32 lut4-lo instruction
-input  wire             op_lut4hi       , // RV32 lut4-hi instruction
-input  wire             op_lut4         , // RV64 lut4    instruction
+input  wire             op_xperm4       , //      Crossbar Permutation (Nibbles)
+input  wire             op_xperm8       , //      Crossbar Permutation (Bytes)
 input  wire             op_saes32_encs  , // RV32 AES Encrypt SBox
 input  wire             op_saes32_encsm , // RV32 AES Encrypt SBox + MixCols
 input  wire             op_saes32_decs  , // RV32 AES Decrypt SBox
@@ -158,49 +159,41 @@ localparam EN_COMBINE_SAES32_SM4 =
                                   SIG[LEN-1:0]  )
 
 //
-// LUT4 instructions:
+// XPERM instructions:
 // ------------------------------------------------------------
 
-wire        lut4_valid  ;
+wire        xperm_valid;
+wire [XL:0] xperm_rs1, xperm_rs2;
 
-wire [XL:0] lut4_rs1    = `GATE_INPUTS(XLEN,lut4_valid,rs1);
-wire [XL:0] lut4_rs2    = `GATE_INPUTS(XLEN,lut4_valid,rs2);
+assign xperm_rs1 = `GATE_INPUTS(XLEN,xperm_valid,rs1);
+assign xperm_rs2 = `GATE_INPUTS(XLEN,xperm_valid,rs2);
 
-wire        lut4_ready  ;
-wire [XL:0] lut4_result ;
+wire        xperm_ready  ;
+wire [XL:0] xperm_result ;
 
-generate if(LUT4_EN) begin : lut4_implemented
+generate if(XPERM_EN) begin : xperm_implemented
 
-    if(RV32) begin
+    assign xperm_valid = op_xperm4 || op_xperm8;
 
-        assign lut4_valid = op_lut4lo || op_lut4hi;
-
-    end else begin
-        
-        assign lut4_valid = op_lut4               ;
-
-    end
-
-    riscv_crypto_fu_lut4 #(
+    riscv_crypto_fu_xperm #(
         .XLEN   (XLEN)
-    ) i_riscv_crypto_fu_lut4 (
+    ) i_riscv_crypto_fu_xperm (
         .g_clk     (g_clk       ), // Global clock
         .g_resetn  (g_resetn    ), // Synchronous active low reset.
-        .valid     (lut4_valid  ), // Inputs valid.
-        .rs1       (lut4_rs1    ), // Source register 1
-        .rs2       (lut4_rs2    ), // Source register 2
-        .op_lut4lo (op_lut4lo   ), // RV32 lut4-lo instruction
-        .op_lut4hi (op_lut4hi   ), // RV32 lut4-hi instruction
-        .op_lut4   (op_lut4     ), // RV64 lut4    instruction
-        .ready     (lut4_ready  ), // Outputs ready.
-        .rd        (lut4_result )  // Result
+        .valid     (xperm_valid  ), // Inputs valid.
+        .rs1       (xperm_rs1    ), // Source register 1
+        .rs2       (xperm_rs2    ), // Source register 2
+        .op_xperm4 (op_xperm4   ), // Crossbar Permutation (nibbles) Instruction
+        .op_xperm8 (op_xperm8   ), // Crossbar Permutation (bytes) Instruction
+        .ready     (xperm_ready  ), // Outputs ready.
+        .rd        (xperm_result )  // Result
     );
 
-end else begin : lut4_not_implemented
+end else begin : xperm_not_implemented
 
-    assign lut4_result  = {XLEN{1'b0}};
-    assign lut4_ready   = 1'b0;
-    assign lut4_valid   = 1'b0;
+    assign xperm_result  = {XLEN{1'b0}};
+    assign xperm_ready   = 1'b0;
+    assign xperm_valid   = 1'b0;
 
 end endgenerate
 
@@ -553,7 +546,7 @@ end endgenerate
 // ------------------------------------------------------------
 
 assign ready =
-    lut4_ready          ||
+    xperm_ready         ||
     ssha256_ready       ||
     ssha512_ready       ||
     saes32_ready        ||
@@ -563,7 +556,7 @@ assign ready =
     saes32_ssm4_ready   ;
 
 assign rd   =
-    {XLEN{lut4_valid        }} & lut4_result        |
+    {XLEN{xperm_valid       }} & xperm_result       |
     {XLEN{ssha256_valid     }} & ssha256_result     |
     {XLEN{ssha512_valid     }} & ssha512_result     |
     {XLEN{saes32_valid      }} & saes32_result      |

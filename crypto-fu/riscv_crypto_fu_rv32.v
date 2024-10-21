@@ -1,4 +1,7 @@
-
+// Copyright (C) 2024
+//    Peter Herrmann
+//
+// Modified from existing source from Ben Marshall, with the following license:
 // 
 // Copyright (C) 2020 
 //    SCARV Project  <info@scarv.org>
@@ -28,8 +31,8 @@
 //
 //  Instruction     | Feature Parameter 
 //  ----------------|----------------------------------
-//   lut4lo         | LUT4_EN           
-//   lut4hi         | LUT4_EN           
+//   xperm4         | XPERM_EN           
+//   xperm8         | XPERM_EN           
 //   saes32.encs    | SAES_EN
 //   saes32.encsm   | SAES_EN     
 //   saes32.decs    | SAES_DEC_EN     
@@ -50,7 +53,7 @@
 //   ssm4.ed        | SSM4_EN
 //
 module riscv_crypto_fu_rv32 #(
-parameter LUT4_EN           = 1 , // Enable the lut4 instructions.
+parameter XPERM_EN          = 1 , // Enable the xperm* instructions.
 parameter SAES_EN           = 1 , // Enable the saes32/64 instructions.
 parameter SAES_DEC_EN       = 1 , // Enable the saes32/64 decrypt instructions.
 parameter SSHA256_EN        = 1 , // Enable the ssha256.* instructions.
@@ -69,9 +72,8 @@ input  wire [     31:0] rs1             , // Source register 1
 input  wire [     31:0] rs2             , // Source register 2
 input  wire [      3:0] imm             , // bs, enc_rcon for aes32/64.
 
-input  wire             op_lut4lo       , // RV32 lut4-lo instruction
-input  wire             op_lut4hi       , // RV32 lut4-hi instruction
-input  wire             op_lut4         , // RV64 lut4    instruction
+input  wire             op_xperm4       , //      Crossbar Permutation (Nibbles)
+input  wire             op_xperm8       , //      Crossbar Permutation (Bytes)
 input  wire             op_saes32_encs  , // RV32 AES Encrypt SBox
 input  wire             op_saes32_encsm , // RV32 AES Encrypt SBox + MixCols
 input  wire             op_saes32_decs  , // RV32 AES Decrypt SBox
@@ -99,7 +101,7 @@ output wire [     31:0] rd
 
 riscv_crypto_fu #(
 .XLEN           (32             ), // Must be one of: 32, 64.
-.LUT4_EN        (LUT4_EN        ), // Enable the lut4 instructions.
+.XPERM_EN       (XPERM_EN       ), // Enable the xperm* instructions.
 .SAES_EN        (SAES_EN        ), // Enable the saes32/64 instructions.
 .SAES_DEC_EN    (SAES_DEC_EN    ), // Enable saes32/64 decrypt instructions.
 .SAES64_SBOXES  (8              ), // saes64 sbox instances. Valid values: 8
@@ -116,9 +118,8 @@ riscv_crypto_fu #(
 .rs1             (rs1             ), // Source register 1
 .rs2             (rs2             ), // Source register 2
 .imm             (imm             ), // bs, enc_rcon for aes32/64.
-.op_lut4lo       (op_lut4lo       ), // RV32 lut4-lo instruction
-.op_lut4hi       (op_lut4hi       ), // RV32 lut4-hi instruction
-.op_lut4         (1'b0            ), // RV64 lut4    instruction
+.op_xperm4       (op_xperm4       ), //      Crossbar Permutation (Nibbles)
+.op_xperm8       (op_xperm8       ), //      Crossbar Permutation (Bytes)
 .op_saes32_encs  (op_saes32_encs  ), // RV32 AES Encrypt SBox
 .op_saes32_encsm (op_saes32_encsm ), // RV32 AES Encrypt SBox + MixCols
 .op_saes32_decs  (op_saes32_decs  ), // RV32 AES Decrypt SBox
