@@ -1,4 +1,8 @@
-
+// Copyright (C) 2024
+//    Peter Herrmann
+//
+// Modified from existing source from Ben Marshall, with the following license:
+// 
 // 
 // Copyright (C) 2020 
 //    SCARV Project  <info@scarv.org>
@@ -18,27 +22,31 @@
 //
 
 //
-// module: tb_checker_lut4_rv64
+// module: tb_checker_xperm8_rv32
 //
-//  Re-usable checker for the 64-bit lut4 instructions
+//  Re-usable checker for the 32-bit xperm8 instructions
 //
-module tb_checker_lut4_rv64 (
+module tb_checker_xperm8_rv32 (
 
-input  wire [63:0] rs1,
-input  wire [63:0] rs2,
+input  wire [31:0] rs1,
+input  wire [31:0] rs2,
 
-output wire [63:0] rd
+output wire [31:0] rd
 
 );
 
-
-wire[3:0] lut4_rv64_lut [15:0];
+// Calculate the lut.
+wire [7:0] xperm8_rv32_lut [3:0];
 
 genvar i;
+generate for(i = 0; i < 4; i = i + 1) begin
+    assign xperm8_rv32_lut[i] = rs2[8*i+:8];
+end endgenerate
 
-for(i=0; i < (64/4); i=i+1) begin
-    assign lut4_rv64_lut[  i   ] =               rs2[4*i+:4] ;
-    assign rd           [4*i+:4] = lut4_rv64_lut[rs1[4*i+:4]];
-end
+// Calculate the nibble values for the output
+assign rd[8*0+:8] = xperm8_rv32_lut[rs1[8*0+:2]];
+assign rd[8*1+:8] = xperm8_rv32_lut[rs1[8*1+:2]];
+assign rd[8*2+:8] = xperm8_rv32_lut[rs1[8*2+:2]];
+assign rd[8*3+:8] = xperm8_rv32_lut[rs1[8*3+:2]];
 
 endmodule

@@ -35,7 +35,7 @@ input dut_g_resetn
 
 // `XLEN set by verify.sby depending on job type.
 parameter XLEN          = `XLEN ; // Must be one of: 32, 64.
-parameter LUT4_EN       = 1     ; // Enable the lut4 instructions.
+parameter XPERM_EN      = 1 , // Enable the xperm* instructions.
 parameter SAES_EN       = 1     ; // Enable the saes32/64 instructions.
 parameter SAES_DEC_EN   = 1     ; // Enable the saes32/64 decrypt instructions.
 parameter SAES64_SBOXES =`SBOXES; // saes64 sbox instances. Valid values: 8
@@ -58,9 +58,8 @@ reg [ XLEN-1:0] dut_rs1             = $anyseq; // Source register 1
 reg [ XLEN-1:0] dut_rs2             = $anyseq; // Source register 2
 reg [      3:0] dut_imm             = $anyseq; // bs, enc_rcon for aes32/64.
 
-reg             dut_op_lut4lo       = RV32 && LUT4_EN     ? $anyseq : 1'b0;
-reg             dut_op_lut4hi       = RV32 && LUT4_EN     ? $anyseq : 1'b0;
-reg             dut_op_lut4         = RV64 && LUT4_EN     ? $anyseq : 1'b0;
+reg             dut_op_xperm4       =         XPERM_EN    ? $anyseq : 1'b0;
+reg             dut_op_xperm8       =         XPERM_EN    ? $anyseq : 1'b0;
 reg             dut_op_saes32_encs  = RV32 && SAES_EN     ? $anyseq : 1'b0;
 reg             dut_op_saes32_encsm = RV32 && SAES_EN     ? $anyseq : 1'b0;
 reg             dut_op_saes32_decs  = RV32 && SAES_DEC_EN ? $anyseq : 1'b0;
@@ -117,14 +116,16 @@ end else begin
     assign grm_saes_valid = 1'b0;
 end endgenerate
 
-wire             grm_lut4_valid = RV64 ? dut_op_lut4                    :
-                                         dut_op_lut4lo || dut_op_lut4hi ;
-wire             grm_lut4_ready = grm_lut4_valid ;
+wire             grm_xperm4_valid = dut_op_xperm4;
+wire             grm_xperm8_valid = dut_op_xperm8;
+wire             grm_xperm4_ready = grm_xperm4_valid ;
+wire             grm_xperm8_ready = grm_xperm8_valid ;
 
 wire             grm_ssm4_valid = dut_op_ssm4_ks || dut_op_ssm4_ed      ;
 
 wire [XLEN-1:0]  grm_saes_rd    ;
-wire [XLEN-1:0]  grm_lut4_rd    ;
+wire [XLEN-1:0]  grm_xperm4_rd    ;
+wire [XLEN-1:0]  grm_xperm8_rd    ;
 wire [    31:0]  grm_ssm4_rd    ;
 
 reg  [XLEN-1:0]  grm_rd         ;
@@ -153,7 +154,7 @@ end
 // There must be a better way??
 
 wire [31:0] op_inputs = {
-    dut_op_lut4lo       , dut_op_lut4hi       , dut_op_lut4         ,
+    dut_op_xperm4       , dut_op_xperm8       ,
     dut_op_saes32_encs  , dut_op_saes32_encsm , dut_op_saes32_decs  ,
     dut_op_saes32_decsm , dut_op_saes64_ks1   , dut_op_saes64_ks2   ,
     dut_op_saes64_imix  , dut_op_saes64_encs  , dut_op_saes64_encsm ,
@@ -197,9 +198,8 @@ always @(posedge dut_g_clk) begin
         assume($stable(dut_rs1             ));
         assume($stable(dut_rs2             ));
         assume($stable(dut_imm             ));
-        assume($stable(dut_op_lut4lo       ));
-        assume($stable(dut_op_lut4hi       ));
-        assume($stable(dut_op_lut4         ));
+        assume($stable(dut_op_xperm4       ));
+        assume($stable(dut_op_xperm8       ));
         assume($stable(dut_op_saes32_encs  ));
         assume($stable(dut_op_saes32_encsm ));
         assume($stable(dut_op_saes32_decs  ));
@@ -275,21 +275,20 @@ always @(posedge dut_g_clk) begin
                 cover(dut_op_saes64_decsm);
             end
 
-        end else if(grm_lut4_valid) begin : check_lut4
+        end else if(grm_xperm4_valid) begin : check_xperm4
 
-            assert(dut_rd == grm_lut4_rd);
-            cover (dut_rd == grm_lut4_rd);
-            
-            if(RV32) begin
-                
-                cover(dut_op_lut4lo);
-                cover(dut_op_lut4hi);
+            assert(dut_rd == grm_xperm4_rd);
+            cover (dut_rd == grm_xperm4_rd);
 
-            end else if(RV64) begin
-                
-                cover(dut_op_lut4  );
+            cover(dut_op_xperm4);
 
-            end
+
+        end else if(grm_xperm8_valid) begin : check_xperm8
+
+            assert(dut_rd == grm_xperm8_rd);
+            cover (dut_rd == grm_xperm8_rd);
+
+            cover(dut_op_xperm8);
 
         end else if(grm_ssm4_valid) begin: check_ssm4
 
@@ -316,7 +315,7 @@ end
 
 riscv_crypto_fu #(
 .XLEN         (XLEN         ), // Must be one of: 32, 64.
-.LUT4_EN      (LUT4_EN      ), // Enable the lut4 instructions.
+.XPERM_EN     (XPERM_EN     ), // Enable the xperm* instructions.
 .SAES_EN      (SAES_EN      ), // Enable the saes32/64 instructions.
 .SAES_DEC_EN  (SAES_DEC_EN  ), // Enable the saes32/64 decrypt instructions.
 .SAES64_SBOXES(SAES64_SBOXES), // saes64 sbox instances. Valid values: 8
@@ -331,9 +330,8 @@ riscv_crypto_fu #(
 .rs1             (dut_rs1             ), // Source register 1
 .rs2             (dut_rs2             ), // Source register 2
 .imm             (dut_imm             ), // bs, enc_rcon for aes32/64.
-.op_lut4lo       (dut_op_lut4lo       ), // RV32 lut4-lo instruction
-.op_lut4hi       (dut_op_lut4hi       ), // RV32 lut4-hi instruction
-.op_lut4         (dut_op_lut4         ), // RV64 lut4    instruction
+.op_xperm4       (dut_op_xperm4       ), //      Crossbar Permutation (Nibbles)
+.op_xperm8       (dut_op_xperm8       ), //      Crossbar Permutation (Bytes)
 .op_saes32_encs  (dut_op_saes32_encs  ), // RV32 AES Encrypt SBox
 .op_saes32_encsm (dut_op_saes32_encsm ), // RV32 AES Encrypt SBox + MixCols
 .op_saes32_decs  (dut_op_saes32_decs  ), // RV32 AES Decrypt SBox
@@ -411,21 +409,32 @@ tb_checker_saes64 i_tb_checker_saes64 (
 
 end endgenerate
 
-generate if(RV32) begin : checker_model_lut4_rv32
+generate if(RV32) begin : checker_model_xperm_rv32
 
-tb_checker_lut4_rv32 i_checker_lut4_rv32 (
+tb_checker_xperm4_rv32 i_checker_xperm4_rv32 (
 .rs1(dut_rs1        ),
 .rs2(dut_rs2        ),
-.hi (dut_op_lut4hi  ),
-.rd (grm_lut4_rd    )
+.rd (grm_xperm4_rd    )
 );
 
-end else if(RV64) begin : checker_model_lut4_rv64
-
-tb_checker_lut4_rv64 i_checker_lut4_rv64 (
+tb_checker_xperm8_rv32 i_checker_xperm8_rv32 (
 .rs1(dut_rs1        ),
 .rs2(dut_rs2        ),
-.rd (grm_lut4_rd    )
+.rd (grm_xperm8_rd    )
+);
+
+end else if(RV64) begin : checker_model_xperm_rv64
+
+tb_checker_xperm4_rv64 i_checker_xperm4_rv64 (
+.rs1(dut_rs1        ),
+.rs2(dut_rs2        ),
+.rd (grm_xperm4_rd    )
+);
+
+tb_checker_xperm8_rv64 i_checker_xperm8_rv64 (
+.rs1(dut_rs1        ),
+.rs2(dut_rs2        ),
+.rd (grm_xperm8_rd    )
 );
 
 end endgenerate
